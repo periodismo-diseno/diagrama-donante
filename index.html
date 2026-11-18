@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Línea de Tiempo Interactiva</title>
+
+  <!-- Tipografías Google Fonts: DM Sans (Títulos) y Montserrat (Texto) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,500;9..40,700&family=Montserrat:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <style>
+    :root {
+      --bg-page: #f4f7fb;
+      --bg-card: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #64748b;
+      --accent: #2563eb;
+      --accent-soft: #eff6ff;
+      --accent-border: #bfdbfe;
+      --line-base: #cbd5e1;
+      --shadow-sm: 0 4px 14px rgba(15, 23, 42, 0.05);
+      --shadow-active: 0 14px 32px rgba(37, 99, 235, 0.14);
+      --radius-lg: 16px;
+      --transition: 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: 'Montserrat', sans-serif;
+      line-height: 1.65;
+      padding: 3.5rem 0 4.5rem;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Contenedor principal: 3/4 de la pantalla (75%), centrado */
+    .main-container {
+      width: 75%;
+      margin: 0 auto;
+    }
+
+    /* Encabezado */
+    .header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .header__eyebrow {
+      display: inline-block;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      border: 1px solid var(--accent-border);
+      padding: 0.35rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+
+    .header__title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: clamp(1.9rem, 3.2vw, 2.75rem);
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 0.85rem;
+    }
+
+    .header__subtitle {
+      font-family: 'Montserrat', sans-serif;
+      font-size: clamp(0.98rem, 1.2vw, 1.12rem);
+      font-weight: 400;
+      color: var(--text-secondary);
+      max-width: 660px;
+      margin: 0 auto 1.25rem;
+    }
+
+    .header__hint {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .header__hint-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.45); opacity: 0.5; }
+    }
+
+    /* Estructura de la Línea de Tiempo */
+    .timeline {
+      position: relative;
+      padding: 1rem 0;
+    }
+
+    /* Eje central */
+    .timeline::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      width: 3px;
+      background-color: var(--line-base);
+      transform: translateX(-50%);
+      border-radius: 3px;
+    }
+
+    /* Barra de progreso activa sobre el eje */
+    .timeline__progress {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 3px;
+      height: 0;
+      background: linear-gradient(180deg, #60a5fa 0%, var(--accent) 100%);
+      transform: translateX(-50%);
+      border-radius: 3px;
+      transition: height var(--transition);
+      z-index: 1;
+    }
+
+    /* Cada Hito */
+    .milestone {
+      position: relative;
+      width: 50%;
+      padding: 0 2.5rem 2.25rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .milestone:last-child {
+      padding-bottom: 0.5rem;
+    }
+
+    /* Alternancia izquierda / derecha */
+    .milestone:nth-child(odd) {
+      left: 0;
+      align-items: flex-end;
+      text-align: right;
+    }
+
+    .milestone:nth-child(even) {
+      left: 50%;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    /* Nodo circular en el eje */
+    .milestone__node {
+      position: absolute;
+      top: 1.35rem;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background-color: var(--bg-card);
+      border: 3.5px solid var(--line-base);
+      z-index: 2;
+      transition: all var(--transition);
+      cursor: pointer;
+    }
+
+    .milestone:nth-child(odd) .milestone__node {
+      right: -9px;
+    }
+
+    .milestone:nth-child(even) .milestone__node {
+      left: -9px;
+    }
+
+    .milestone.is-active .milestone__node,
+    .milestone:hover .milestone__node {
+      border-color: var(--accent);
+      background-color: var(--accent);
+      box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.16);
+      transform: scale(1.15);
+    }
+
+    /* Tarjeta del Hito */
+    .milestone__card {
+      width: 100%;
+      background-color: var(--bg-card);
+      border: 1px solid #e2e8f0;
+      border-radius: var(--radius-lg);
+      padding: 1.35rem 1.6rem;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      outline: none;
+    }
+
+    .milestone__card:focus-visible {
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.35);
+    }
+
+    .milestone.is-active .milestone__card {
+      border-color: var(--accent-border);
+      box-shadow: var(--shadow-active);
+      transform: translateY(-3px);
+    }
+
+    .milestone__header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .milestone:nth-child(odd) .milestone__header {
+      flex-direction: row-reverse;
+    }
+
+    .milestone__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .milestone__year {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.04em;
+    }
+
+    .milestone__title {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+
+    /* Indicador visual de despliegue */
+    .milestone__toggle {
+      flex-shrink: 0;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background-color: var(--bg-page);
+      color: var(--text-secondary);
+      display: grid;
+      place-items: center;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 700;
+      font-size: 1.1rem;
+      transition: transform var(--transition), background-color var(--transition), color var(--transition);
+    }
+
+    .milestone.is-active .milestone__toggle {
+      background-color: var(--accent);
+      color: #ffffff;
+      transform: rotate(45deg);
+    }
+
+    /* Contenido desplegable mediante CSS Grid para animación fluida */
+    .milestone__body-wrapper {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows var(--transition), opacity 0.3s ease, margin-top var(--transition);
+      margin-top: 0;
+    }
+
+    .milestone.is-active .milestone__body-wrapper {
+      grid-template-rows: 1fr;
+      opacity: 1;
+      margin-top: 0.85rem;
+    }
+
+    .milestone__body {
+      overflow: hidden;
+    }
+
+    .milestone__text {
+      font-family: 'Montserrat', sans-serif;
+      font-size: 0.94rem;
+      color: var(--text-secondary);
+      border-top: 1px solid #f1f5f9;
+      padding-top: 0.85rem;
+    }
+
+    /* Fuente de información */
+    .source-footer {
+      margin-top: 3.5rem;
+      padding: 1.25rem 1.5rem;
+      background-color: var(--bg-card);
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid var(--accent);
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .source-footer strong {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text-primary);
+    }
+
+    .source-footer a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .source-footer a:hover {
+      text-decoration: underline;
+    }
+
+    /* Adaptación responsiva en pantallas pequeñas */
+    @media (max-width: 860px) {
+      .main-container {
+        width: 90%;
+      }
+
+      .timeline::before,
+      .timeline__progress {
+        left: 16px;
+        transform: none;
+      }
+
+      .milestone,
+      .milestone:nth-child(odd),
+      .milestone:nth-child(even) {
+        width: 100%;
+        left: 0;
+        padding: 0 0 1.75rem 2.75rem;
+        align-items: flex-start;
+        text-align: left;
+      }
+
+      .milestone:nth-child(odd) .milestone__node,
+      .milestone:nth-child(even) .milestone__node {
+        left: 8px;
+        right: auto;
+      }
+
+      .milestone:nth-child(odd) .milestone__header {
+        flex-direction: row;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="main-container">
+    <!-- Título y Subtítulo -->
+    <header class="header">
+      
+      <h1 class="header__title">El recorrido del donante</h1>
+      <p class="header__subtitle">
+        Identificación, notificación, evaluación clínica, certificación de muerte encefálica, coordinación y extracción de órganos.
+      </p>
+      
+      <p class="header__hint">
+        <span class="header__hint-dot" aria-hidden="true"></span>
+        Pasa el cursor o haz clic sobre cada hito para desplegar su descripción
+      </p>
+    </header>
+
+    <!-- Línea de Tiempo Interactiva (6 Hitos) -->
+    <section class="timeline" id="timeline" aria-label="Línea de tiempo de la evolución de la Web">
+      <div class="timeline__progress" id="timelineProgress" aria-hidden="true"></div>
+
+      <!-- Hito 1 -->
+      <article class="milestone is-active" data-index="0">
+        <span class="milestone__node" aria-hidden="true"></span>
+        <div class="milestone__card" role="button" tabindex="0" aria-expanded="true">
+          <div class="milestone__header">
+            <div class="milestone__meta">
+              
+              <h2 class="milestone__title">Identificación del posible donante</h2>
+            </div>
+            <span class="milestone__toggle" aria-hidden="true">+</span>
+          </div>
+          <div class="milestone__body-wrapper">
+            <div class="milestone__body">
+              <p class="milestone__text">
+                El proceso comienza cuando los equipos de urgencia o cuidados intensivos identifican a un paciente con una lesión neurológica grave que podría evolucionar a muerte encefálica. Esta detección permite activar las evaluaciones correspondientes.
+                <br>Importante: si el caso no se identifica, puede no iniciarse la evaluación para una eventual donación.
+
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hito 2 -->
+      <article class="milestone" data-index="1">
+        <span class="milestone__node" aria-hidden="true"></span>
+        <div class="milestone__card" role="button" tabindex="0" aria-expanded="false">
+          <div class="milestone__header">
+            <div class="milestone__meta">
+              
+              <h2 class="milestone__title">Notificación al equipo de procuramiento</h2>
+            </div>
+            <span class="milestone__toggle" aria-hidden="true">+</span>
+          </div>
+          <div class="milestone__body-wrapper">
+            <div class="milestone__body">
+              <p class="milestone__text">
+                El equipo clínico comunica el caso a la coordinación local de procuramiento, que realiza el seguimiento y articula las evaluaciones necesarias. La información debe registrarse en los sistemas establecidos para garantizar su trazabilidad.
+                <br>Importante: Una notificación tardía puede dificultar la coordinación y el seguimiento del caso.
+
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hito 3 -->
+      <article class="milestone" data-index="2">
+        <span class="milestone__node" aria-hidden="true"></span>
+        <div class="milestone__card" role="button" tabindex="0" aria-expanded="false">
+          <div class="milestone__header">
+            <div class="milestone__meta">
+             
+              <h2 class="milestone__title">Evaluación clínica</h2>
+            </div>
+            <span class="milestone__toggle" aria-hidden="true">+</span>
+          </div>
+          <div class="milestone__body-wrapper">
+            <div class="milestone__body">
+              <p class="milestone__text">
+                Los profesionales revisan los antecedentes médicos del paciente y evalúan las condiciones que podrían permitir la donación. También consideran posibles contraindicaciones y las medidas necesarias para preservar la función de los órganos.
+                <br>Importante: No todas las personas identificadas como posibles donantes reúnen las condiciones clínicas para donar.
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hito 4 -->
+      <article class="milestone" data-index="3">
+        <span class="milestone__node" aria-hidden="true"></span>
+        <div class="milestone__card" role="button" tabindex="0" aria-expanded="false">
+          <div class="milestone__header">
+            <div class="milestone__meta">
+              
+              <h2 class="milestone__title">Certificación de muerte encefálica</h2>
+            </div>
+            <span class="milestone__toggle" aria-hidden="true">+</span>
+          </div>
+          <div class="milestone__body-wrapper">
+            <div class="milestone__body">
+              <p class="milestone__text">
+                Cuando corresponde, médicos habilitados realizan las evaluaciones exigidas para confirmar el fallecimiento por muerte encefálica. Se trata de un diagnóstico de muerte, no de un coma, y debe establecerse conforme a los criterios médicos y legales vigentes.
+                <br>Importante: La certificación es independiente de la decisión de utilizar los órganos para trasplante.
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hito 5 -->
+      <article class="milestone" data-index="4">
+        <span class="milestone__node" aria-hidden="true"></span>
+        <div class="milestone__card" role="button" tabindex="0" aria-expanded="false">
+          <div class="milestone__header">
+            <div class="milestone__meta">
+              
+              <h2 class="milestone__title">Coordinación de la donación</h2>
+            </div>
+            <span class="milestone__toggle" aria-hidden="true">+</span>
+          </div>
+          <div class="milestone__body-wrapper">
+            <div class="milestone__body">
+              <p class="milestone__text">
+                Confirmados los requisitos médicos y legales, los equipos de procuramiento coordinan la donación, las evaluaciones finales y la asignación de órganos a receptores compatibles según los criterios establecidos. También se realizan las gestiones legales y familiares que correspondan.
+                <br>Importante: La disponibilidad de equipos, pabellones y transporte puede influir en el desarrollo del operativo.
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Hito 6 -->
+      <article class="milestone" data-index="5">
+        <span class="milestone__node" aria-hidden="true"></span>
+        <div class="milestone__card" role="button" tabindex="0" aria-expanded="false">
+          <div class="milestone__header">
+            <div class="milestone__meta">
+            
+              <h2 class="milestone__title">Extracción y traslado de órganos</h2>
+            </div>
+            <span class="milestone__toggle" aria-hidden="true">+</span>
+          </div>
+          <div class="milestone__body-wrapper">
+            <div class="milestone__body">
+              <p class="milestone__text">
+                Equipos especializados realizan la extracción quirúrgica de los órganos autorizados para donación. Luego se preservan y trasladan a los centros de trasplante, donde serán implantados a los receptores seleccionados.
+                <br>Importante: Cada órgano tiene tiempos y condiciones de preservación específicos, por lo que la coordinación resulta fundamental.
+              </p>
+            </div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- Fuente de Información -->
+    <footer class="source-footer">
+      <div>
+        <p>
+          *Aclaración: este diagrama representa la donación de órganos de personas fallecidas por muerte encefálica, no todas las modalidades de donación.
+        </p>
+      </div>
+     
+    </footer>
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const timeline = document.getElementById('timeline');
+      const progressLine = document.getElementById('timelineProgress');
+      const milestones = Array.from(document.querySelectorAll('.milestone'));
+
+      // Actualiza la altura de la línea de progreso hasta el nodo activo
+      function updateProgress(activeMilestone) {
+        if (!activeMilestone) {
+          progressLine.style.height = '0px';
+          return;
+        }
+        const node = activeMilestone.querySelector('.milestone__node');
+        const timelineRect = timeline.getBoundingClientRect();
+        const nodeRect = node.getBoundingClientRect();
+        const offset = nodeRect.top - timelineRect.top + nodeRect.height / 2;
+        progressLine.style.height = `${Math.max(0, offset)}px`;
+      }
+
+      // Activa un hito específico y colapsa los demás para mantener limpia la lectura
+      function activateMilestone(target) {
+        milestones.forEach((item) => {
+          const isTarget = item === target;
+          item.classList.toggle('is-active', isTarget);
+          const card = item.querySelector('.milestone__card');
+          card.setAttribute('aria-expanded', String(isTarget));
+        });
+        // Espera un frame para calcular la nueva geometría tras iniciar el despliegue
+        requestAnimationFrame(() => updateProgress(target));
+      }
+
+      // Alterna un hito al hacer clic (permite cerrar si ya estaba abierto)
+      function toggleMilestone(target) {
+        const alreadyActive = target.classList.contains('is-active');
+        if (alreadyActive) {
+          target.classList.remove('is-active');
+          target.querySelector('.milestone__card').setAttribute('aria-expanded', 'false');
+          updateProgress(null);
+        } else {
+          activateMilestone(target);
+        }
+      }
+
+      milestones.forEach((milestone) => {
+        const card = milestone.querySelector('.milestone__card');
+        const node = milestone.querySelector('.milestone__node');
+
+        // Despliegue al pasar el cursor (hover en dispositivos con puntero fino)
+        milestone.addEventListener('mouseenter', () => {
+          if (window.matchMedia('(hover: hover)').matches) {
+            activateMilestone(milestone);
+          }
+        });
+
+        // Despliegue/colapso al hacer clic en tarjeta o nodo
+        card.addEventListener('click', () => toggleMilestone(milestone));
+        node.addEventListener('click', () => toggleMilestone(milestone));
+
+        // Accesibilidad por teclado (Enter / Espacio)
+        card.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggleMilestone(milestone);
+          }
+        });
+      });
+
+      // Inicializar barra de progreso en el primer hito activo y recalcular al redimensionar
+      const initialActive = document.querySelector('.milestone.is-active');
+      updateProgress(initialActive);
+
+      window.addEventListener('resize', () => {
+        const currentActive = document.querySelector('.milestone.is-active');
+        updateProgress(currentActive);
+      });
+    });
+  </script>
+</body>
+</html>
